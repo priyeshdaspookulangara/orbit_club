@@ -1,7 +1,16 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Zap, ShieldCheck, Mail, MapPin, Phone } from 'lucide-react';
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard')) {
+    return null;
+  }
+
   return (
     <footer className="glass-panel border-t border-cyan-500/20 bg-slate-950/90 mt-20 relative z-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

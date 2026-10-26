@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   const totalRevenueResult = db.prepare('SELECT SUM(amount) as total FROM orders').get() as { total: number | null };
   const totalRevenue = totalRevenueResult.total || 0;
 
-  const totalMembersResult = db.prepare('SELECT COUNT(*) as count FROM users WHERE role = "member"').get() as { count: number };
+  const totalMembersResult = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'member'").get() as { count: number };
   const totalMembers = totalMembersResult.count;
 
   const totalCommissionsResult = db.prepare('SELECT SUM(amount) as total FROM transactions').get() as { total: number | null };

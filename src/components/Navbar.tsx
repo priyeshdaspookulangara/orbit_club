@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Shield, Zap, User, LogOut, Menu, X, ChevronRight, Award } from 'lucide-react';
+import { Zap, User, LogOut, Menu, X, ChevronRight } from 'lucide-react';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -26,6 +26,11 @@ export default function Navbar() {
       })
       .catch(() => setUser(null));
   }, [pathname]);
+
+  // Hide top public navbar when in admin or member dashboard portal to preserve sidebar layout
+  if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard')) {
+    return null;
+  }
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });

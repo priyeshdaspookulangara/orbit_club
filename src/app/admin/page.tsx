@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import SidebarLayout from '@/components/SidebarLayout';
 import { ShieldAlert, Users, Wallet, Package, Search, ChevronLeft, ChevronRight, Edit, Zap } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -76,8 +77,21 @@ export default function AdminDashboard() {
 
   const { metrics, members, pagination } = data;
 
+  const adminUser = {
+    id: 'ORB00000',
+    name: 'Admin User',
+    email: 'admin@orbitnutrition.com',
+    role: 'admin' as const,
+  };
+
+  const breadcrumbs = [
+    { label: 'Home', href: '/' },
+    { label: 'Admin Portal', href: '/admin' },
+    { label: 'Control Center' },
+  ];
+
   return (
-    <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8 bg-[#0b0f19] space-y-8 max-w-7xl mx-auto">
+    <SidebarLayout user={adminUser} breadcrumbs={breadcrumbs}>
 
       {/* Admin Header */}
       <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-cyan-500/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-slate-900/90 via-slate-900 to-slate-950">
@@ -136,7 +150,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Distributors & Fulfillment Table Container */}
-      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-cyan-500/30 space-y-6">
+      <div id="directory" className="glass-panel p-6 sm:p-8 rounded-3xl border border-cyan-500/30 space-y-6">
 
         {/* Table Filter Controls */}
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
@@ -288,6 +302,6 @@ export default function AdminDashboard() {
 
       </div>
 
-    </div>
+    </SidebarLayout>
   );
 }

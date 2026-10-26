@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Zap, Wallet, Users, Package, Layers, ArrowUpRight, Copy, Check, ChevronDown, ChevronRight, UserPlus, Truck, Award, Shield, AlertCircle } from 'lucide-react';
+import SidebarLayout from '@/components/SidebarLayout';
+import { Zap, Wallet, Users, Package, Layers, Copy, Check, UserPlus, Truck } from 'lucide-react';
 
 export default function UserDashboard() {
   const router = useRouter();
   const [data, setData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [treeData, setTreeData] = useState<any | null>(null);
 
   useEffect(() => {
     fetch('/api/user/me')
@@ -23,11 +23,6 @@ export default function UserDashboard() {
       .then((d) => {
         if (d && d.authenticated) {
           setData(d);
-          // Fetch tree node children
-          fetch(`/api/matrix/tree?root=${d.user.id}`)
-            .then((r) => r.json())
-            .then((tree) => setTreeData(tree))
-            .catch(() => {});
         }
       })
       .finally(() => setLoading(false));
@@ -57,8 +52,14 @@ export default function UserDashboard() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const breadcrumbs = [
+    { label: 'Home', href: '/' },
+    { label: 'Member Portal', href: '/dashboard' },
+    { label: 'Overview' },
+  ];
+
   return (
-    <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8 bg-[#0b0f19] space-y-8 max-w-7xl mx-auto">
+    <SidebarLayout user={user} breadcrumbs={breadcrumbs}>
 
       {/* Top Banner Header */}
       <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-cyan-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 bg-gradient-to-r from-slate-900/90 via-slate-900 to-slate-950">
@@ -99,7 +100,7 @@ export default function UserDashboard() {
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div id="wallet" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
         {/* Wallet Balance */}
         <div className="glass-panel p-6 rounded-2xl border border-emerald-500/30 hover:border-emerald-500/60 transition-all space-y-3">
@@ -154,7 +155,7 @@ export default function UserDashboard() {
         <div className="lg:col-span-7 space-y-8">
 
           {/* Interactive Matrix Tree View */}
-          <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-cyan-500/30 space-y-6">
+          <div id="matrix" className="glass-panel p-6 sm:p-8 rounded-3xl border border-cyan-500/30 space-y-6">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div>
                 <h3 className="text-xl font-bold text-white flex items-center space-x-2">
@@ -207,7 +208,7 @@ export default function UserDashboard() {
           </div>
 
           {/* Product Fulfillment Details */}
-          <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
+          <div id="fulfillment" className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
             <h3 className="text-xl font-bold text-white flex items-center space-x-2 border-b border-slate-800 pb-4">
               <Truck className="w-5 h-5 text-cyan-400" />
               <span>1kg Whey Protein Fulfillment Status</span>
@@ -289,6 +290,6 @@ export default function UserDashboard() {
 
       </div>
 
-    </div>
+    </SidebarLayout>
   );
 }
