@@ -21,7 +21,6 @@ export async function GET(request: Request) {
     let whereClause = '1=1';
     const params: any[] = [];
 
-    // Member only sees their own transactions; Admin sees all or filtered user transactions
     if (auth.role !== 'admin') {
       whereClause += ' AND t.user_id = ?';
       params.push(auth.userId);
@@ -43,7 +42,8 @@ export async function GET(request: Request) {
       LEFT JOIN users u ON t.user_id = u.id
       WHERE ${whereClause}
     `;
-    const totalRecords = (db.prepare(countQuery).get(...params) as { total: number })?.total || 0;
+    const countRes = await db.queryOne(countQuery, params);
+    const totalRecords = countRes?.total || 0;
 
     // Get Paginated Transactions
     const dataQuery = `
@@ -67,7 +67,7 @@ export async function GET(request: Request) {
       LIMIT ? OFFSET ?
     `;
 
-    const transactions = db.prepare(dataQuery).all(...params, limit, offset);
+    const transactions = await db.query(dataQuery, [...params, limit, offset]);
 
     // Calculate Summary Stats
     let statsQuery = `
@@ -77,24 +77,22 @@ export async function GET(request: Request) {
         SUM(CASE WHEN t.type = 'WITHDRAWAL' THEN ABS(t.amount) ELSE 0 END) as total_withdrawn
       FROM transactions t
     `;
+    const statsParams: any[] = [];
     if (auth.role !== 'admin') {
-      statsQuery += ` WHERE t.user_id = '${auth.userId}'`;
+      statsQuery += ` WHERE t.user_id = ?`;
+      statsParams.push(auth.userId);
     }
 
-    const stats = db.prepare(statsQuery).get() as {
-      total_direct: number | null;
-      total_matrix: number | null;
-      total_withdrawn: number | null;
-    };
+    const stats = await db.queryOne(statsQuery, statsParams);
 
     return NextResponse.json({
       success: true,
       transactions,
       stats: {
-        totalDirect: stats?.total_direct || 0,
-        totalMatrix: stats?.total_matrix || 0,
-        totalWithdrawn: stats?.total_withdrawn || 0,
-        netBalance: (stats?.total_direct || 0) + (stats?.total_matrix || 0) - (stats?.total_withdrawn || 0),
+        totalDirect: Number(stats?.total_direct) || 0,
+        totalMatrix: Number(stats?.total_matrix) || 0,
+        totalWithdrawn: Number(stats?.total_withdrawn) || 0,
+        netBalance: (Number(stats?.total_direct) || 0) + (Number(stats?.total_matrix) || 0) - (Number(stats?.total_withdrawn) || 0),
       },
       pagination: {
         page,

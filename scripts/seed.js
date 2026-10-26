@@ -16,47 +16,42 @@ db.pragma('foreign_keys = ON');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'member',
-    sponsor_id TEXT,
-    parent_id TEXT,
-    matrix_level INTEGER NOT NULL DEFAULT 0,
-    position INTEGER,
-    bfs_sequence INTEGER NOT NULL UNIQUE,
-    wallet_balance REAL NOT NULL DEFAULT 0,
-    flavor_preference TEXT DEFAULT 'Chocolate',
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'member',
+    sponsor_id VARCHAR(50),
+    parent_id VARCHAR(50),
+    matrix_level INT NOT NULL DEFAULT 0,
+    position INT,
+    bfs_sequence INT NOT NULL UNIQUE,
+    wallet_balance DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    flavor_preference VARCHAR(50) DEFAULT 'Chocolate',
     shipping_address TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (sponsor_id) REFERENCES users(id),
-    FOREIGN KEY (parent_id) REFERENCES users(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
 
   CREATE TABLE IF NOT EXISTS orders (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    package_name TEXT NOT NULL DEFAULT '1kg Pure Whey Protein Powder Kit',
-    amount REAL NOT NULL DEFAULT 6000,
-    flavor TEXT NOT NULL DEFAULT 'Chocolate',
-    fulfillment_status TEXT NOT NULL DEFAULT 'Processing',
-    tracking_number TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL,
+    package_name VARCHAR(255) NOT NULL DEFAULT '1kg Pure Whey Protein Powder Kit',
+    amount DECIMAL(12,2) NOT NULL DEFAULT 6000.00,
+    flavor VARCHAR(50) NOT NULL DEFAULT 'Chocolate',
+    fulfillment_status VARCHAR(50) NOT NULL DEFAULT 'Processing',
+    tracking_number VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
 
   CREATE TABLE IF NOT EXISTS transactions (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    source_user_id TEXT NOT NULL,
-    type TEXT NOT NULL,
-    amount REAL NOT NULL,
-    level_depth INTEGER,
+    id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL,
+    source_user_id VARCHAR(50) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    level_depth INT,
     description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (source_user_id) REFERENCES users(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   );
 `);
 

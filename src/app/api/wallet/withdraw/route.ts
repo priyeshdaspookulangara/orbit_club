@@ -29,39 +29,39 @@ export async function POST(request: Request) {
 
     return await withdrawMutex.runExclusive(async () => {
       // Get fresh user wallet balance
-      const user = db.prepare('SELECT id, wallet_balance FROM users WHERE id = ?').get(auth.userId) as { id: string; wallet_balance: number };
+      const user = await db.queryOne('SELECT id, wallet_balance FROM users WHERE id = ?', [auth.userId]);
 
       if (!user) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
 
-      if (user.wallet_balance < withdrawAmount) {
+      const currentBalance = Number(user.wallet_balance);
+
+      if (currentBalance < withdrawAmount) {
         return NextResponse.json({
-          error: `Insufficient wallet balance. Available: ₹${user.wallet_balance.toLocaleString()}`,
+          error: `Insufficient wallet balance. Available: ₹${currentBalance.toLocaleString()}`,
         }, { status: 400 });
       }
 
       const txId = `WITHDRAW-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      const newBalance = user.wallet_balance - withdrawAmount;
+      const newBalance = currentBalance - withdrawAmount;
 
-      const executeWithdrawal = db.transaction(() => {
+      await db.withTransaction(async (tx) => {
         // Deduct wallet balance
-        db.prepare('UPDATE users SET wallet_balance = ? WHERE id = ?').run(newBalance, auth.userId);
+        await tx.query('UPDATE users SET wallet_balance = ? WHERE id = ?', [newBalance, auth.userId]);
 
         // Record withdrawal transaction
-        db.prepare(`
+        await tx.query(`
           INSERT INTO transactions (id, user_id, source_user_id, type, amount, description)
           VALUES (?, ?, ?, 'WITHDRAWAL', ?, ?)
-        `).run(
+        `, [
           txId,
           auth.userId,
           auth.userId,
           -withdrawAmount,
           `Payout Request (${method}): ${payoutDetails.trim()}`
-        );
+        ]);
       });
-
-      executeWithdrawal();
 
       return NextResponse.json({
         success: true,

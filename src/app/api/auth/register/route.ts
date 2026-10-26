@@ -20,13 +20,13 @@ export async function POST(req: NextRequest) {
     const cleanSponsorId = sponsorId.trim().toUpperCase();
 
     // Verify sponsor exists
-    const sponsor = db.prepare('SELECT id, name FROM users WHERE id = ?').get(cleanSponsorId) as { id: string; name: string } | undefined;
+    const sponsor = await db.queryOne('SELECT id, name FROM users WHERE id = ?', [cleanSponsorId]);
     if (!sponsor) {
       return NextResponse.json({ error: `Sponsor ID '${cleanSponsorId}' not found in the system.` }, { status: 400 });
     }
 
     // Verify email uniqueness
-    const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase().trim());
+    const existingEmail = await db.queryOne('SELECT id FROM users WHERE email = ?', [email.toLowerCase().trim()]);
     if (existingEmail) {
       return NextResponse.json({ error: 'This email address is already registered.' }, { status: 400 });
     }

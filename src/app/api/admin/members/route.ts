@@ -1,89 +1,103 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 import db from '@/lib/db';
+import { getAuthUser } from '@/lib/auth';
 
-export async function GET(req: NextRequest) {
-  const auth = getAuthUser();
-  if (!auth || auth.role !== 'admin') {
-    return NextResponse.json({ error: 'Unauthorized access.' }, { status: 403 });
-  }
+export const dynamic = 'force-dynamic';
 
-  const { searchParams } = new URL(req.url);
-  const query = searchParams.get('q') || '';
-  const page = parseInt(searchParams.get('page') || '1', 10);
-  const limit = parseInt(searchParams.get('limit') || '10', 10);
-  const offset = (page - 1) * limit;
-
-  // Platform metrics
-  const totalRevenueResult = db.prepare('SELECT SUM(amount) as total FROM orders').get() as { total: number | null };
-  const totalRevenue = totalRevenueResult.total || 0;
-
-  const totalMembersResult = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'member'").get() as { count: number };
-  const totalMembers = totalMembersResult.count;
-
-  const totalCommissionsResult = db.prepare('SELECT SUM(amount) as total FROM transactions').get() as { total: number | null };
-  const totalCommissions = totalCommissionsResult.total || 0;
-
-  const totalOrdersResult = db.prepare('SELECT COUNT(*) as count FROM orders').get() as { count: number };
-  const totalOrders = totalOrdersResult.count;
-
-  // Filtered members list
-  const searchFilter = query ? `%${query.trim()}%` : '%';
-
-  const countResult = db.prepare(`
-    SELECT COUNT(*) as count FROM users
-    WHERE id LIKE ? OR name LIKE ? OR email LIKE ? OR sponsor_id LIKE ? OR parent_id LIKE ?
-  `).get(searchFilter, searchFilter, searchFilter, searchFilter, searchFilter) as { count: number };
-
-  const members = db.prepare(`
-    SELECT u.id, u.name, u.email, u.role, u.sponsor_id, u.parent_id, u.matrix_level, u.position, u.bfs_sequence, u.wallet_balance, u.flavor_preference, u.shipping_address, u.created_at,
-           o.fulfillment_status, o.tracking_number, o.id as order_id
-    FROM users u
-    LEFT JOIN orders o ON o.user_id = u.id
-    WHERE u.id LIKE ? OR u.name LIKE ? OR u.email LIKE ? OR u.sponsor_id LIKE ? OR u.parent_id LIKE ?
-    ORDER BY u.bfs_sequence ASC
-    LIMIT ? OFFSET ?
-  `).all(searchFilter, searchFilter, searchFilter, searchFilter, searchFilter, limit, offset);
-
-  return NextResponse.json({
-    metrics: {
-      totalRevenue,
-      totalMembers,
-      totalCommissions,
-      totalOrders,
-    },
-    members,
-    pagination: {
-      page,
-      limit,
-      totalRecords: countResult.count,
-      totalPages: Math.ceil(countResult.count / limit),
-    },
-  });
-}
-
-export async function PATCH(req: NextRequest) {
-  const auth = getAuthUser();
-  if (!auth || auth.role !== 'admin') {
-    return NextResponse.json({ error: 'Unauthorized access.' }, { status: 403 });
-  }
-
+export async function GET(request: Request) {
   try {
-    const body = await req.json();
-    const { orderId, fulfillmentStatus, trackingNumber } = body;
-
-    if (!orderId || !fulfillmentStatus) {
-      return NextResponse.json({ error: 'OrderId and fulfillmentStatus are required.' }, { status: 400 });
+    const auth = getAuthUser();
+    if (!auth || auth.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    db.prepare(`
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('q') || '';
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '10', 10);
+    const offset = (page - 1) * limit;
+
+    let whereClause = '';
+    const params: any[] = [];
+
+    if (search.trim()) {
+      whereClause = 'WHERE u.id LIKE ? OR u.name LIKE ? OR u.email LIKE ? OR u.sponsor_id LIKE ? OR u.parent_id LIKE ?';
+      const term = `%${search.trim()}%`;
+      params.push(term, term, term, term, term);
+    }
+
+    // Platform Metrics
+    const totalRevenueRes = await db.queryOne(`SELECT COUNT(*) * 6000 as total_revenue FROM orders`);
+    const totalMembersRes = await db.queryOne(`SELECT COUNT(*) as total_members FROM users WHERE role = 'member'`);
+    const totalCommissionsRes = await db.queryOne(`SELECT SUM(amount) as total_commissions FROM transactions WHERE type IN ('DIRECT_REFERRAL', 'MATRIX_LEVEL')`);
+    const totalOrdersRes = await db.queryOne(`SELECT COUNT(*) as total_orders FROM orders`);
+
+    // Total Count
+    const countRes = await db.queryOne(`SELECT COUNT(*) as total FROM users u ${whereClause}`, params);
+    const totalRecords = countRes?.total || 0;
+
+    // Paginated Members Listing
+    const membersListQuery = `
+      SELECT
+        u.id, u.name, u.email, u.role, u.sponsor_id, u.parent_id,
+        u.matrix_level, u.position, u.bfs_sequence, u.wallet_balance,
+        u.flavor_preference, u.created_at,
+        o.id as order_id, o.fulfillment_status, o.tracking_number
+      FROM users u
+      LEFT JOIN orders o ON o.user_id = u.id
+      ${whereClause}
+      ORDER BY u.bfs_sequence ASC
+      LIMIT ? OFFSET ?
+    `;
+
+    const members = await db.query(membersListQuery, [...params, limit, offset]);
+
+    return NextResponse.json({
+      metrics: {
+        totalRevenue: totalRevenueRes?.total_revenue || 0,
+        totalMembers: totalMembersRes?.total_members || 0,
+        totalCommissions: totalCommissionsRes?.total_commissions || 0,
+        totalOrders: totalOrdersRes?.total_orders || 0,
+      },
+      members,
+      pagination: {
+        page,
+        limit,
+        totalRecords,
+        totalPages: Math.ceil(totalRecords / limit),
+      },
+    });
+  } catch (err: any) {
+    console.error('Admin members fetch error:', err);
+    return NextResponse.json({ error: err.message || 'Failed to fetch members' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const auth = getAuthUser();
+    if (!auth || auth.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
+    const { orderId, fulfillmentStatus, trackingNumber } = await request.json();
+
+    if (!orderId || !fulfillmentStatus) {
+      return NextResponse.json({ error: 'Order ID and fulfillment status required' }, { status: 400 });
+    }
+
+    await db.query(`
       UPDATE orders
       SET fulfillment_status = ?, tracking_number = ?
       WHERE id = ?
-    `).run(fulfillmentStatus, trackingNumber || null, orderId);
+    `, [fulfillmentStatus, trackingNumber || null, orderId]);
 
-    return NextResponse.json({ success: true, message: 'Fulfillment status updated.' });
+    return NextResponse.json({
+      success: true,
+      message: 'Product kit fulfillment status updated successfully',
+    });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });
+    console.error('Order status update error:', err);
+    return NextResponse.json({ error: err.message || 'Failed to update order' }, { status: 500 });
   }
 }

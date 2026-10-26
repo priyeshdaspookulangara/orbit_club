@@ -1,20 +1,35 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const sponsorId = searchParams.get('sponsorId');
+export const dynamic = 'force-dynamic';
 
-  if (!sponsorId) {
-    return NextResponse.json({ valid: false, message: 'Sponsor ID is required.' }, { status: 400 });
-  }
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const sponsorId = searchParams.get('id');
 
-  const cleanId = sponsorId.trim().toUpperCase();
-  const user = db.prepare('SELECT id, name FROM users WHERE id = ?').get(cleanId) as { id: string; name: string } | undefined;
+    if (!sponsorId) {
+      return NextResponse.json({ valid: false, error: 'Sponsor ID parameter missing' }, { status: 400 });
+    }
 
-  if (user) {
-    return NextResponse.json({ valid: true, name: user.name, id: user.id });
-  } else {
-    return NextResponse.json({ valid: false, message: 'Sponsor ID not found in database.' }, { status: 404 });
+    const sponsor = await db.queryOne(`
+      SELECT id, name, role
+      FROM users
+      WHERE id = ?
+    `, [sponsorId.trim()]);
+
+    if (!sponsor) {
+      return NextResponse.json({ valid: false, error: `Sponsor ID '${sponsorId}' not found.` }, { status: 444 });
+    }
+
+    return NextResponse.json({
+      valid: true,
+      sponsor: {
+        id: sponsor.id,
+        name: sponsor.name,
+      },
+    });
+  } catch (err: any) {
+    return NextResponse.json({ valid: false, error: 'Failed to verify sponsor' }, { status: 500 });
   }
 }

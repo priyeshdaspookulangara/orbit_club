@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 async function testMatrixEngine() {
   console.log('Testing Matrix Engine & Commission logic...');
 
-  initDb();
+  await initDb();
 
   const pw = bcrypt.hashSync('Password123!', 10);
 
@@ -27,10 +27,10 @@ async function testMatrixEngine() {
   // Direct referral bonus: 12 * 1000 = 12,000
   // Matrix level bonus: 12 * 200 = 2,400 (ORB00000 receives L1 for 1-10 and L1 via ORB00001 for 11-12)
   // Total expected = 14,400
-  const root = db.prepare('SELECT wallet_balance FROM users WHERE id = ?').get('ORB00000') as { wallet_balance: number };
+  const root = await db.queryOne('SELECT wallet_balance FROM users WHERE id = ?', ['ORB00000']) as { wallet_balance: number };
   console.log(`Root ORB00000 Wallet Balance: ₹${root.wallet_balance}`);
 
-  const user11 = db.prepare('SELECT id, parent_id, matrix_level FROM users WHERE id = ?').get('ORB00011') as { id: string; parent_id: string; matrix_level: number } | undefined;
+  const user11 = await db.queryOne('SELECT id, parent_id, matrix_level FROM users WHERE id = ?', ['ORB00011']) as { id: string; parent_id: string; matrix_level: number } | undefined;
 
   if (user11) {
     console.log(`User ${user11.id} Parent: ${user11.parent_id}, Level: ${user11.matrix_level}`);
