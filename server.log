@@ -1,0 +1,42 @@
+
+> orbit-nutrition@0.1.0 dev
+> next dev
+
+ ⚠ Port 3000 is in use, trying 3001 instead.
+ ⚠ Port 3001 is in use, trying 3002 instead.
+ ⚠ Port 3002 is in use, trying 3003 instead.
+ ⚠ Port 3003 is in use, trying 3004 instead.
+  ▲ Next.js 14.2.15
+  - Local:        http://localhost:3004
+
+ ✓ Starting...
+ ✓ Ready in 3.1s
+ ○ Compiling /login ...
+ ✓ Compiled /login in 5.8s (545 modules)
+ ✓ Compiled in 828ms (280 modules)
+ GET /login 200 in 6689ms
+ ○ Compiling /api/user/me ...
+ ✓ Compiled /api/user/me in 5.3s (519 modules)
+ GET /api/user/me 401 in 5544ms
+ GET /api/user/me 401 in 11ms
+ GET /login 200 in 131ms
+ GET /api/user/me 401 in 18ms
+ GET /api/user/me 401 in 12ms
+ ✓ Compiled /api/auth/login in 332ms (523 modules)
+ POST /api/auth/login 200 in 639ms
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 797ms (829 modules)
+ GET /admin 200 in 970ms
+ ○ Compiling /api/reports/payouts ...
+ ✓ Compiled /api/reports/payouts in 744ms (859 modules)
+ GET /api/admin/members?q=&page=1&limit=10 200 in 560ms
+ GET /api/reports/payouts?type=ALL&q=&page=1&limit=10 200 in 576ms
+ GET /api/user/me 200 in 609ms
+ GET /dashboard 200 in 1072ms
+ GET /api/admin/members?q=&page=1&limit=10 200 in 56ms
+ GET /api/user/me 200 in 44ms
+ GET /api/reports/payouts?type=ALL&q=&page=1&limit=10 200 in 63ms
+ GET /api/user/me 200 in 12ms
+ GET /api/user/me 200 in 43ms
+ GET /api/user/me 200 in 37ms
+ GET /api/user/me 200 in 28ms

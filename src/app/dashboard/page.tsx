@@ -21,7 +21,10 @@ import {
   ArrowDownRight,
   Download,
   FileText,
-  Filter
+  Filter,
+  Share2,
+  Send,
+  MessageCircle
 } from 'lucide-react';
 
 export default function UserDashboard() {
@@ -180,10 +183,10 @@ export default function UserDashboard() {
           </p>
         </div>
 
-        {/* Copy Referral Box */}
+        {/* Copy & Social Referral Share Box */}
         <div className="w-full md:w-auto glass-panel p-4 rounded-2xl border border-slate-800 space-y-2">
           <span className="text-xs font-mono text-slate-400 uppercase tracking-wider block">Your Personal Referral Link</span>
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="text"
               readOnly
@@ -192,10 +195,51 @@ export default function UserDashboard() {
             />
             <button
               onClick={copyReferral}
-              className="p-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all font-bold"
-              title="Copy link"
+              className="p-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all font-bold flex items-center justify-center"
+              title="Copy referral link"
             >
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            </button>
+
+            {/* WhatsApp Share Button */}
+            <a
+              href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Join Orbit Nutrition Direct Selling 10-Matrix Plan using my sponsor ID: ${user.id}!\nRegister here: ${sponsorLink}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-all font-bold flex items-center justify-center"
+              title="Share via WhatsApp"
+            >
+              <MessageCircle className="w-4 h-4" />
+            </a>
+
+            {/* Telegram Share Button */}
+            <a
+              href={`https://t.me/share/url?url=${encodeURIComponent(sponsorLink)}&text=${encodeURIComponent(`Join Orbit Nutrition 10-Matrix Plan with Sponsor ID ${user.id}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white transition-all font-bold flex items-center justify-center"
+              title="Share via Telegram"
+            >
+              <Send className="w-4 h-4" />
+            </a>
+
+            {/* Native Web Share API */}
+            <button
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({
+                    title: 'Orbit Nutrition Referral',
+                    text: `Join Orbit Nutrition Direct Selling 10-Matrix Plan with my Sponsor ID: ${user.id}`,
+                    url: sponsorLink,
+                  }).catch(() => {});
+                } else {
+                  copyReferral();
+                }
+              }}
+              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 transition-all font-bold flex items-center justify-center"
+              title="Share via device options"
+            >
+              <Share2 className="w-4 h-4" />
             </button>
           </div>
         </div>
