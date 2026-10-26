@@ -2,11 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Zap, Lock, Mail, ArrowRight, Shield, AlertCircle } from 'lucide-react';
 
 export default function Login() {
-  const router = useRouter();
   const [form, setForm] = useState({ emailOrId: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,12 +27,8 @@ export default function Login() {
         throw new Error(data.error || 'Failed to sign in.');
       }
 
-      if (data.user.role === 'admin') {
-        router.push('/admin');
-      } else {
-        router.push('/dashboard');
-      }
-      router.refresh();
+      const target = data.user.role === 'admin' ? '/admin' : '/dashboard';
+      window.location.href = target;
     } catch (err: any) {
       setError(err.message);
     } finally {

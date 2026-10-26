@@ -3,7 +3,23 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import SidebarLayout from '@/components/SidebarLayout';
-import { Zap, Wallet, Users, Package, Layers, Copy, Check, UserPlus, Truck } from 'lucide-react';
+import {
+  Zap,
+  Wallet,
+  Users,
+  Package,
+  Layers,
+  Copy,
+  Check,
+  UserPlus,
+  Truck,
+  ArrowUpRight,
+  CreditCard,
+  Building,
+  RefreshCw,
+  Clock,
+  ArrowDownRight
+} from 'lucide-react';
 
 export default function UserDashboard() {
   const router = useRouter();
@@ -11,7 +27,15 @@ export default function UserDashboard() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
+  // Withdrawal modal state
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [payoutMethod, setPayoutMethod] = useState<'UPI' | 'BANK_TRANSFER'>('UPI');
+  const [payoutDetails, setPayoutDetails] = useState('');
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
+  const [withdrawMessage, setWithdrawMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const fetchUserData = () => {
     fetch('/api/user/me')
       .then((res) => {
         if (!res.ok) {
@@ -26,7 +50,45 @@ export default function UserDashboard() {
         }
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchUserData();
   }, [router]);
+
+  const handleWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWithdrawLoading(true);
+    setWithdrawMessage(null);
+
+    try {
+      const res = await fetch('/api/wallet/withdraw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: withdrawAmount,
+          method: payoutMethod,
+          payoutDetails,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        setWithdrawMessage({ type: 'error', text: result.error || 'Withdrawal failed' });
+      } else {
+        setWithdrawMessage({ type: 'success', text: result.message });
+        setWithdrawAmount('');
+        setPayoutDetails('');
+        fetchUserData(); // refresh ledger & wallet balance
+        setTimeout(() => setShowWithdrawModal(false), 2000);
+      }
+    } catch (err: any) {
+      setWithdrawMessage({ type: 'error', text: err.message || 'Error executing request' });
+    } finally {
+      setWithdrawLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -51,6 +113,21 @@ export default function UserDashboard() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // Financial Breakdown calculations
+  const directEarnings = transactions
+    .filter((tx: any) => tx.type === 'DIRECT_REFERRAL')
+    .reduce((sum: number, tx: any) => sum + tx.amount, 0);
+
+  const matrixLevelEarnings = transactions
+    .filter((tx: any) => tx.type === 'MATRIX_LEVEL')
+    .reduce((sum: number, tx: any) => sum + tx.amount, 0);
+
+  const totalWithdrawn = Math.abs(
+    transactions
+      .filter((tx: any) => tx.type === 'WITHDRAWAL')
+      .reduce((sum: number, tx: any) => sum + tx.amount, 0)
+  );
 
   const breadcrumbs = [
     { label: 'Home', href: '/' },
@@ -99,17 +176,26 @@ export default function UserDashboard() {
         </div>
       </div>
 
-      {/* Metrics Grid */}
+      {/* Metrics & Wallet Cards Grid */}
       <div id="wallet" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-        {/* Wallet Balance */}
-        <div className="glass-panel p-6 rounded-2xl border border-emerald-500/30 hover:border-emerald-500/60 transition-all space-y-3">
+        {/* Wallet Balance & Action Card */}
+        <div className="glass-panel p-6 rounded-2xl border border-emerald-500/40 bg-emerald-950/20 hover:border-emerald-500/70 transition-all space-y-4">
           <div className="flex justify-between items-center text-slate-400">
-            <span className="text-xs font-mono uppercase">Total Wallet Balance</span>
+            <span className="text-xs font-mono uppercase font-bold text-emerald-400">Available Wallet</span>
             <Wallet className="w-5 h-5 text-emerald-400" />
           </div>
-          <p className="text-3xl font-black text-emerald-400 font-mono">₹{user.walletBalance.toLocaleString()}</p>
-          <p className="text-[11px] text-slate-400">Instant direct & level commissions</p>
+          <div>
+            <p className="text-3xl font-black text-emerald-400 font-mono">₹{user.walletBalance.toLocaleString()}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Instant direct & level commissions</p>
+          </div>
+          <button
+            onClick={() => setShowWithdrawModal(true)}
+            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-extrabold text-xs flex items-center justify-center space-x-2 shadow-neon transition-all"
+          >
+            <ArrowUpRight className="w-4 h-4" />
+            <span>Withdraw Earnings</span>
+          </button>
         </div>
 
         {/* Matrix Placement Tier */}
@@ -129,7 +215,7 @@ export default function UserDashboard() {
             <UserPlus className="w-5 h-5 text-amber-400" />
           </div>
           <p className="text-3xl font-black text-amber-400 font-mono">{directRecruits.length}</p>
-          <p className="text-[11px] text-slate-400">Earned ₹{(directRecruits.length * 1000).toLocaleString()} referral bonus</p>
+          <p className="text-[11px] text-slate-400">Earned ₹{directEarnings.toLocaleString()} referral bonus</p>
         </div>
 
         {/* Fulfillment Status */}
@@ -146,6 +232,39 @@ export default function UserDashboard() {
           </p>
         </div>
 
+      </div>
+
+      {/* Financial Summary Breakdown Bar */}
+      <div className="glass-panel p-6 rounded-3xl border border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-6 font-mono text-xs">
+        <div className="flex items-center space-x-4 border-b sm:border-b-0 sm:border-r border-slate-800 pb-4 sm:pb-0 sm:pr-4">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <ArrowDownRight className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-slate-400 block text-[10px] uppercase">Direct Referral Bonus</span>
+            <span className="text-lg font-bold text-emerald-400">₹{directEarnings.toLocaleString()}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-4 border-b sm:border-b-0 sm:border-r border-slate-800 pb-4 sm:pb-0 sm:pr-4">
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <Layers className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-slate-400 block text-[10px] uppercase">10-Matrix Level Bonus</span>
+            <span className="text-lg font-bold text-cyan-400">₹{matrixLevelEarnings.toLocaleString()}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-4">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <Clock className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-slate-400 block text-[10px] uppercase">Total Payouts Settled</span>
+            <span className="text-lg font-bold text-amber-400">₹{totalWithdrawn.toLocaleString()}</span>
+          </div>
+        </div>
       </div>
 
       {/* Main Content Split */}
@@ -253,35 +372,61 @@ export default function UserDashboard() {
 
         </div>
 
-        {/* Right Column: Wallet Commissions Ledger */}
+        {/* Right Column: Wallet Commissions & Withdrawal Ledger */}
         <div className="lg:col-span-5 space-y-8">
 
           <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-cyan-500/30 space-y-6">
-            <h3 className="text-xl font-bold text-white flex items-center space-x-2 border-b border-slate-800 pb-4">
-              <Wallet className="w-5 h-5 text-emerald-400" />
-              <span>Real-time Commission Ledger</span>
-            </h3>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <h3 className="text-xl font-bold text-white flex items-center space-x-2">
+                <Wallet className="w-5 h-5 text-emerald-400" />
+                <span>Real-time Financial Ledger</span>
+              </h3>
+              <button
+                onClick={fetchUserData}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-slate-800"
+                title="Refresh Ledger"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
 
             {transactions.length === 0 ? (
               <div className="text-center py-8 text-slate-500 text-xs font-mono">
                 No financial transactions recorded yet.
               </div>
             ) : (
-              <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-                {transactions.map((tx: any) => (
-                  <div key={tx.id} className="p-4 rounded-xl bg-slate-900 border border-slate-800/80 space-y-1 font-mono text-xs">
-                    <div className="flex justify-between items-center">
-                      <span className={`font-bold ${tx.type === 'DIRECT_REFERRAL' ? 'text-emerald-400' : 'text-cyan-400'}`}>
-                        {tx.type === 'DIRECT_REFERRAL' ? '₹1,000 Direct Bonus' : `₹200 Level ${tx.level_depth} Bonus`}
-                      </span>
-                      <span className="text-emerald-400 font-black text-sm">+₹{tx.amount}</span>
+              <div className="space-y-3 max-h-[520px] overflow-y-auto pr-2">
+                {transactions.map((tx: any) => {
+                  const isWithdrawal = tx.type === 'WITHDRAWAL';
+                  const isDirect = tx.type === 'DIRECT_REFERRAL';
+
+                  return (
+                    <div key={tx.id} className="p-4 rounded-xl bg-slate-900 border border-slate-800/80 space-y-1 font-mono text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className={`font-bold ${
+                          isWithdrawal
+                            ? 'text-amber-400'
+                            : isDirect
+                            ? 'text-emerald-400'
+                            : 'text-cyan-400'
+                        }`}>
+                          {isWithdrawal
+                            ? 'Payout Settlement'
+                            : isDirect
+                            ? '₹1,000 Direct Bonus'
+                            : `₹200 Level ${tx.level_depth} Bonus`}
+                        </span>
+                        <span className={`font-black text-sm ${isWithdrawal ? 'text-amber-400' : 'text-emerald-400'}`}>
+                          {isWithdrawal ? `-₹${Math.abs(tx.amount)}` : `+₹${tx.amount}`}
+                        </span>
+                      </div>
+                      <p className="text-slate-300 text-[11px]">{tx.description}</p>
+                      <div className="text-slate-500 text-[10px] pt-1">
+                        {new Date(tx.created_at).toLocaleString()}
+                      </div>
                     </div>
-                    <p className="text-slate-300 text-[11px]">{tx.description}</p>
-                    <div className="text-slate-500 text-[10px] pt-1">
-                      {new Date(tx.created_at).toLocaleString()}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -289,6 +434,122 @@ export default function UserDashboard() {
         </div>
 
       </div>
+
+      {/* Withdrawal Modal Dialog */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-cyan-500/40 max-w-md w-full bg-slate-950 space-y-6 shadow-2xl relative">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-bold">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-white">Withdraw Earnings</h3>
+                  <span className="text-xs text-emerald-400 font-mono">
+                    Available: ₹{user.walletBalance.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowWithdrawModal(false)}
+                className="text-slate-400 hover:text-white font-mono text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {withdrawMessage && (
+              <div
+                className={`p-3 rounded-xl text-xs font-mono ${
+                  withdrawMessage.type === 'success'
+                    ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/40'
+                    : 'bg-red-950/60 text-red-400 border border-red-500/40'
+                }`}
+              >
+                {withdrawMessage.text}
+              </div>
+            )}
+
+            <form onSubmit={handleWithdraw} className="space-y-4 font-mono text-xs">
+              <div>
+                <label className="text-slate-300 block mb-1">Withdrawal Amount (₹)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={user.walletBalance}
+                  required
+                  placeholder="Enter amount (e.g., 1000)"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-slate-300 block mb-1">Payout Method</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPayoutMethod('UPI')}
+                    className={`py-2 px-3 rounded-xl border flex items-center justify-center space-x-2 font-bold ${
+                      payoutMethod === 'UPI'
+                        ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400'
+                        : 'bg-slate-900 border-slate-800 text-slate-400'
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>UPI ID</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPayoutMethod('BANK_TRANSFER')}
+                    className={`py-2 px-3 rounded-xl border flex items-center justify-center space-x-2 font-bold ${
+                      payoutMethod === 'BANK_TRANSFER'
+                        ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400'
+                        : 'bg-slate-900 border-slate-800 text-slate-400'
+                    }`}
+                  >
+                    <Building className="w-4 h-4" />
+                    <span>Bank Account</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-300 block mb-1">
+                  {payoutMethod === 'UPI' ? 'UPI Virtual Payment Address (VPA)' : 'Bank Account No. & IFSC'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder={payoutMethod === 'UPI' ? 'e.g. name@upi' : 'Account No: 12345678, IFSC: HDFC000123'}
+                  value={payoutDetails}
+                  onChange={(e) => setPayoutDetails(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowWithdrawModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={withdrawLoading || user.walletBalance <= 0}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-bold shadow-neon disabled:opacity-50"
+                >
+                  {withdrawLoading ? 'Processing...' : 'Submit Request'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </SidebarLayout>
   );
