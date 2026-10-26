@@ -18,7 +18,10 @@ import {
   Building,
   RefreshCw,
   Clock,
-  ArrowDownRight
+  ArrowDownRight,
+  Download,
+  FileText,
+  Filter
 } from 'lucide-react';
 
 export default function UserDashboard() {
@@ -26,6 +29,9 @@ export default function UserDashboard() {
   const [data, setData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+
+  // Filter for Customer Payout Report
+  const [filterType, setFilterType] = useState('ALL');
 
   // Withdrawal modal state
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -39,7 +45,7 @@ export default function UserDashboard() {
     fetch('/api/user/me')
       .then((res) => {
         if (!res.ok) {
-          router.push('/login');
+          window.location.href = '/login';
           return null;
         }
         return res.json();
@@ -54,7 +60,7 @@ export default function UserDashboard() {
 
   useEffect(() => {
     fetchUserData();
-  }, [router]);
+  }, []);
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,8 +86,7 @@ export default function UserDashboard() {
         setWithdrawMessage({ type: 'success', text: result.message });
         setWithdrawAmount('');
         setPayoutDetails('');
-        fetchUserData(); // refresh ledger & wallet balance
-        setTimeout(() => setShowWithdrawModal(false), 2000);
+        fetchUserData();
       }
     } catch (err: any) {
       setWithdrawMessage({ type: 'error', text: err.message || 'Error executing request' });
@@ -128,6 +133,26 @@ export default function UserDashboard() {
       .filter((tx: any) => tx.type === 'WITHDRAWAL')
       .reduce((sum: number, tx: any) => sum + tx.amount, 0)
   );
+
+  const filteredTransactions = transactions.filter((tx: any) => {
+    if (filterType === 'ALL') return true;
+    return tx.type === filterType;
+  });
+
+  const exportCSV = () => {
+    const headers = ['Transaction ID,Type,Amount (INR),Description,Date'];
+    const rows = filteredTransactions.map((tx: any) =>
+      `"${tx.id}","${tx.type}","${tx.amount}","${tx.description.replace(/"/g, '""')}","${new Date(tx.created_at).toLocaleString()}"`
+    );
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers, ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `orbit_payout_report_${user.id}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const breadcrumbs = [
     { label: 'Home', href: '/' },
@@ -372,31 +397,58 @@ export default function UserDashboard() {
 
         </div>
 
-        {/* Right Column: Wallet Commissions & Withdrawal Ledger */}
+        {/* Right Column: Detailed Payout & Earnings Report Panel */}
         <div className="lg:col-span-5 space-y-8">
 
           <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-cyan-500/30 space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <h3 className="text-xl font-bold text-white flex items-center space-x-2">
-                <Wallet className="w-5 h-5 text-emerald-400" />
-                <span>Real-time Financial Ledger</span>
-              </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+              <div>
+                <h3 className="text-xl font-bold text-white flex items-center space-x-2">
+                  <FileText className="w-5 h-5 text-emerald-400" />
+                  <span>Payout & Statement Report</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 font-mono mt-0.5">Detailed financial transaction ledger</p>
+              </div>
+
               <button
-                onClick={fetchUserData}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-slate-800"
-                title="Refresh Ledger"
+                onClick={exportCSV}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-cyan-400 font-mono text-xs flex items-center space-x-1.5 font-bold transition-all"
               >
-                <RefreshCw className="w-4 h-4" />
+                <Download className="w-3.5 h-3.5" />
+                <span>Export CSV</span>
               </button>
             </div>
 
-            {transactions.length === 0 ? (
+            {/* Filter Tabs */}
+            <div className="flex items-center space-x-2 font-mono text-xs overflow-x-auto pb-1">
+              {['ALL', 'DIRECT_REFERRAL', 'MATRIX_LEVEL', 'WITHDRAWAL'].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setFilterType(t)}
+                  className={`px-2.5 py-1 rounded-lg border font-bold transition-all ${
+                    filterType === t
+                      ? 'bg-cyan-500/20 border-cyan-500/60 text-cyan-400'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {t === 'ALL'
+                    ? 'All'
+                    : t === 'DIRECT_REFERRAL'
+                    ? 'Direct'
+                    : t === 'MATRIX_LEVEL'
+                    ? 'Level'
+                    : 'Payouts'}
+                </button>
+              ))}
+            </div>
+
+            {filteredTransactions.length === 0 ? (
               <div className="text-center py-8 text-slate-500 text-xs font-mono">
-                No financial transactions recorded yet.
+                No statement entries matching filter criteria.
               </div>
             ) : (
               <div className="space-y-3 max-h-[520px] overflow-y-auto pr-2">
-                {transactions.map((tx: any) => {
+                {filteredTransactions.map((tx: any) => {
                   const isWithdrawal = tx.type === 'WITHDRAWAL';
                   const isDirect = tx.type === 'DIRECT_REFERRAL';
 
