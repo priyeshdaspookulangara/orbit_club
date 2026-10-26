@@ -1,0 +1,25 @@
+[Mon Oct 26 14:24:22 2026] PHP 8.3.6 Development Server (http://127.0.0.1:8000) started
+[Mon Oct 26 14:24:39 2026] 127.0.0.1:34296 Accepted
+[Mon Oct 26 14:24:39 2026] 127.0.0.1:34296 [200]: HEAD /
+[Mon Oct 26 14:24:39 2026] 127.0.0.1:34296 Closing
+[Mon Oct 26 14:25:11 2026] 127.0.0.1:35112 Accepted
+[Mon Oct 26 14:25:11 2026] 127.0.0.1:35112 [200]: GET /index.php
+[Mon Oct 26 14:25:11 2026] 127.0.0.1:35112 Closing
+[Mon Oct 26 14:25:13 2026] 127.0.0.1:35124 Accepted
+[Mon Oct 26 14:25:13 2026] 127.0.0.1:35124 [200]: GET /business-plan.php
+[Mon Oct 26 14:25:13 2026] 127.0.0.1:35124 Closing
+[Mon Oct 26 14:25:15 2026] 127.0.0.1:35138 Accepted
+[Mon Oct 26 14:25:15 2026] 127.0.0.1:35138 [200]: GET /login.php
+[Mon Oct 26 14:25:15 2026] 127.0.0.1:35138 Closing
+[Mon Oct 26 14:25:17 2026] 127.0.0.1:35146 Accepted
+[Mon Oct 26 14:25:17 2026] 127.0.0.1:35146 [302]: POST /login.php
+[Mon Oct 26 14:25:17 2026] 127.0.0.1:35146 Closing
+[Mon Oct 26 14:25:17 2026] 127.0.0.1:35148 Accepted
+[Mon Oct 26 14:25:17 2026] 127.0.0.1:35148 [200]: GET /admin.php
+[Mon Oct 26 14:25:17 2026] 127.0.0.1:35148 Closing
+[Mon Oct 26 14:25:19 2026] 127.0.0.1:35160 Accepted
+[Mon Oct 26 14:25:19 2026] 127.0.0.1:35160 [200]: GET /dashboard.php
+[Mon Oct 26 14:25:19 2026] 127.0.0.1:35160 Closing
+[Mon Oct 26 14:25:21 2026] 127.0.0.1:47576 Accepted
+[Mon Oct 26 14:25:21 2026] 127.0.0.1:47576 [200]: GET /admin.php
+[Mon Oct 26 14:25:21 2026] 127.0.0.1:47576 Closing
